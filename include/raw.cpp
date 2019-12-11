@@ -25,7 +25,7 @@ auto as_tuple(tstruct&& obj, overload <2>) noexcept {
 }
 
 template <class tstruct>
-decltype(auto) as_tuple(tstruct&& obj, overload <3>) noexcept {
+auto as_tuple(tstruct&& obj, overload <3>) noexcept {
 	auto&& [_1, _2, _3] = std::forward <tstruct>(obj);
 
 	return std::forward_as_tuple(_1, _2, _3);
@@ -55,17 +55,16 @@ struct auto_t {
 
 // sfinae aggregate initialization
 template <class tstruct, std::size_t... indexes>
-auto aggregate(std::index_sequence <indexes...>) -> decltype(tstruct{ auto_t <indexes>{}... }, void()) {
+auto aggregate(std::index_sequence <indexes...>) -> decltype(std::decay_t <tstruct>{ auto_t <indexes>{}... }, void()) {
 }
 
 // aggregate initialization fails at n + 1 , n - 1 is the original size
-
 template <class tstruct, std::size_t n = 0, class = std::void_t <>>
 struct rank : std::integral_constant <std::size_t, n - 1> {
 };
 
 template <class tstruct, std::size_t n>
-struct rank <tstruct, n, std::void_t <decltype(/**/ aggregate <std::decay_t <tstruct>>(std::make_index_sequence <n>()) /**/) >> : rank <tstruct, n + 1> {
+struct rank <tstruct, n, std::void_t <decltype(/**/ aggregate <tstruct>(std::make_index_sequence <n>()) /**/) >> : rank <tstruct, n + 1> {
 };
 
 //
@@ -77,7 +76,7 @@ inline constexpr std::size_t rank_v = rank <tstruct>::value;
 
 template <std::size_t index, class tstruct>
 decltype(auto) get(tstruct&& obj) {
-	return std::get <index>(as_tuple(std::forward <tstruct>(obj), overload <rank_v <std::decay_t <tstruct>>>{}));
+	return std::get <index>(as_tuple(std::forward <tstruct>(obj), overload <rank_v <tstruct>>{}));
 }
 
 template <class tstruct, class ptr_f, std::size_t... indexes>
